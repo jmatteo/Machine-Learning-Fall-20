@@ -1,37 +1,30 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Sep 28 11:10:45 2020
+from d2l import tensorflow as d2l
+import tensorflow as tf
 
-@author: jakea
-"""
+def corr2d(X, K):  #@save
+    """Compute 2D cross-correlation."""
+    h, w = K.shape
+    Y = tf.Variable(tf.zeros((X.shape[0] - h + 1, X.shape[1] - w + 1)))
+    for i in range(Y.shape[0]):
+        for j in range(Y.shape[1]):
+            Y[i, j].assign(tf.reduce_sum(
+                X[i: i + h, j: j + w] * K))
+    return Y
 
-import torch
-from torch import nn
-from torch.nn import functional as F
-
-net = nn.Sequential(nn.Linear(20, 256), nn.ReLU(), nn.Linear(256, 10))
-
-X = torch.rand(2, 20)
-net(X)
-
-class MLP(nn.Module):
-    # Declare a layer with model parameters. Here, we declare two fully
-    # connected layers
+class Conv2D(tf.keras.layers.Layer):
     def __init__(self):
-        # Call the constructor of the `MLP` parent class `Block` to perform
-        # the necessary initialization. In this way, other function arguments
-        # can also be specified during class instantiation, such as the model
-        # parameters, `params` (to be described later)
         super().__init__()
-        self.hidden = nn.Linear(20, 256)  # Hidden layer
-        self.out = nn.Linear(256, 10)  # Output layer
 
-    # Define the forward propagation of the model, that is, how to return the
-    # required model output based on the input `X`
-    def forward(self, X):
-        # Note here we use the funtional version of ReLU defined in the
-        # nn.functional module.
-        return self.out(F.relu(self.hidden(X)))
-    
-net = MLP()
-net(X)
+    def build(self, kernel_size):
+        initializer = tf.random_normal_initializer()
+        self.weight = self.add_weight(name='w', shape=kernel_size,
+                                      initializer=initializer)
+        self.bias = self.add_weight(name='b', shape=(1, ),
+                                    initializer=initializer)
+
+    def call(self, inputs):
+        return corr2d(inputs, self.weight) + self.bias
+
+X = tf.constant([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0], [6.0, 7.0, 8.0]])
+K = tf.constant([[0.0, 1.0], [2.0, 3.0]])
+corr2d(X, K)
